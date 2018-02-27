@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>upload</title>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="js/spark-md5.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+    <style>
+        input[type="file"] {
+            color: transparent;
+        }
+    </style>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="js/bootstrap-table.min.js"></script>
+
+    <!-- Latest compiled and minified Locales -->
+    <script src="js/bootstrap-table-zh-CN.min.js"></script>
+
+
+    <script>
+        function initFileTable(ev) {
+            $('#table').bootstrapTable({
+                columns: [{
+                    field: 'name',
+                    title: 'filename'
+                }, {
+                    field: 'type',
+                    title: 'fileType'
+                }, {
+                    field: 'size',
+                    title: 'fileSize'
+                }]
+                ,
+                formatNoMatches: function(){
+                    return "";
+                }
+            });
+
+        }
+    </script>
+    <script>
+        function bindFileEvent() {
+            var fileSelector=$("#uploadFiles")[0];
+            var uploadButton=$("#uploadButton")[0];
+            var files=null;
+            fileSelector.addEventListener("change",function () {
+                $('#table').bootstrapTable("removeAll");
+                $(uploadButton).attr("disabled",true);
+                files=Array.prototype.slice.call(fileSelector.files);
+                //main
+                var param={};
+                for (var i = 0; i < files.length; i++) {
+                    param[("path"+i)]=files[i].name;
+                }
+                $.ajax("isFileExist.php",{
+                    data:param,
+                    dataType:"json",
+                    type:"POST",
+                    contentType:"application/x-www-form-urlencoded",
+                    success:function(data) {
+                        var isExist=false;
+                        var existFiles="";
+                        for(isEx in data){
+                            if(data[isEx]==1){
+                                for(var i=0;files[i]!=null;i++){
+                                    var fileData=files[i];
+                                    if(fileData.name==isEx){
+                                        files.splice(i--,1)
+                                    }
+                                }
+                            }
+                        }
+                        //display uploadFile
+                        $('#table').bootstrapTable("load",files);
+                        $(uploadButton).attr("disabled",false);
+                    }
+                });
+                //file_md5
+
+            });
+            $("#uploadForm")[0].onsubmit=function (ev) {
+                ev.preventDefault();
+                var formData = new FormData();
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    formData.append('uploadFiles[]', file, file.name);
+                }
+                $.ajax("upload.php",{
+                    data:formData,
+                    processData:false,
+                    type:"POST",
+                    contentType:false,
+                    success:function (data) {
+                        console.log(data.errno);
+                        if(data.errno=="0"){
+                            alert("upload success!");
+                        }else {
+                            alert(data.err);
+                        }
+                    },
+                    error:function () {
+                        alert("error");
+                    }
+                });
+            };
+        }
+    </script>
+    <script>
+        function init() {
+            initFileTable();
+            bindFileEvent();
+        }
+        window.onload=init;
+    </script>
+</head>
+<body>
+<form action="#" method="post" enctype="multipart/form-data" id="uploadForm">
+    <input type="file" name="uploadFiles" id="uploadFiles" multiple/>
+    <br>
+    <table id="table" ></table>
+    <br>
+    <input type="submit" id="uploadButton"/>
+</form>
+</body>
+</html>
